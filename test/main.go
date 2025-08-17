@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/robotn/gohook"
+	hook "github.com/ms-dosx86/gohook"
 )
 
 func main() {
