@@ -1,11 +1,6 @@
 # gohook
 
-[![Build Status](https://github.com/ms-dosx86/gohook/workflows/Go/badge.svg)](https://github.com/ms-dosx86/gohook/commits/master)
-[![CircleCI Status](https://circleci.com/gh/robotn/gohook.svg?style=shield)](https://circleci.com/gh/robotn/gohook)
-![Appveyor](https://ci.appveyor.com/api/projects/status/github/robotn/gohook?branch=master&svg=true)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ms-dosx86/gohook)](https://goreportcard.com/report/github.com/ms-dosx86/gohook)
-[![GoDoc](https://godoc.org/github.com/ms-dosx86/gohook?status.svg)](https://godoc.org/github.com/ms-dosx86/gohook)
-<!-- This is a work in progress. -->
+This is a fork of [gohook](https://github.com/robotn/gohook) that is updated to use Go 1.25.0 and has been rewritten to completely to fix the issues with mouse events.
 
 ## Requirements (Linux):
 
