@@ -104,12 +104,12 @@ var (
 		}
 	*/
 	registry      = make(map[Kind]map[[4]Code]func(Event))
-	mouseRegistry = make(map[Kind]map[[4]Code]func(Event))
+	mouseRegistry = make(map[Kind]map[Code]func(Event))
 	pressed       = make(map[Code]bool)
 	mousePressed  = make(map[Code]bool)
 	ev            = make(chan Event, 1024)
 	lck           = sync.RWMutex{}
-	debugLevel    = DebugLevel(0)
+	logLevel      = DebugLevel(0)
 )
 
 func allPressed(pressed map[Code]bool, keys [4]Code) bool {
@@ -130,8 +130,8 @@ func allUnpressed(pressed map[Code]bool, keys [4]Code) bool {
 	return true
 }
 
-func SetDebugLevel(level DebugLevel) {
-	debugLevel = level
+func SetLogLevel(level DebugLevel) {
+	logLevel = level
 }
 
 // Register gohook event
@@ -183,12 +183,13 @@ func Register(when Kind, cmds []string, cb func(Event)) error {
 		registry[when][tmp] = cb
 	} else {
 		if _, ok := mouseRegistry[when]; !ok {
-			mouseRegistry[when] = make(map[[4]Code]func(Event))
+			mouseRegistry[when] = make(map[Code]func(Event))
 		}
-		mouseRegistry[when][tmp] = cb
+		mouseRegistry[when][Code(tmp[0])] = cb
 	}
 
-	hookLog("registered %v as %v\n", cmds, tmp)
+	hookLog("registered %v as %v when %v\n", cmds, tmp, when)
+	hookLog("mouseRegistry: %v\n", mouseRegistry)
 	return nil
 }
 
@@ -197,11 +198,20 @@ func Process(evChan <-chan Event) (out chan bool) {
 	out = make(chan bool)
 	go func() {
 		for ev := range evChan {
-			if ev.Kind != KeyDown && ev.Kind != KeyUp && ev.Kind != MouseDown && ev.Kind != MouseUp {
+			hookLog("%v\n", ev)
+			if ev.Kind != KeyDown && ev.Kind != KeyUp && ev.Kind != MouseDown && ev.Kind != MouseUp && ev.Kind != MouseHold {
 				continue
 			}
 
-			hookLog("processing %v\n", ev)
+			if ev.Kind == MouseDown || ev.Kind == MouseUp || ev.Kind == MouseHold {
+				button := Code(ev.Button)
+				_, ok := mouseRegistry[ev.Kind][button]
+				if !ok {
+					hookLog("no callback found for %v\n", button)
+					continue
+				}
+			}
+
 			switch ev.Kind {
 			case KeyDown, KeyHold:
 				hookLog("setting pressed[%v] = true\n", ev.Keycode)
@@ -212,7 +222,7 @@ func Process(evChan <-chan Event) (out chan bool) {
 			case MouseDown:
 				hookLog("setting mousePressed[%v] = true\n", ev.Button)
 				mousePressed[Code(ev.Button)] = true
-			case MouseUp:
+			case MouseUp, MouseHold:
 				hookLog("setting mousePressed[%v] = false\n", ev.Button)
 				mousePressed[Code(ev.Button)] = false
 			}
@@ -238,25 +248,25 @@ func Process(evChan <-chan Event) (out chan bool) {
 						}
 					}
 				}
-			} else {
-				for combination, v := range mouseRegistry[ev.Kind] {
-					switch ev.Kind {
-					case MouseDown:
-						hookLog("checking if %v is pressed\n", combination)
-						if allPressed(mousePressed, combination) {
-							hookLog("calling %v\n", combination)
-							v(ev)
-						} else {
-							hookLog("not all keys are pressed\n")
-						}
-					case MouseUp:
-						hookLog("checking if %v is pressed\n", combination)
-						if allUnpressed(mousePressed, combination) {
-							hookLog("calling %v\n", combination)
-							v(ev)
-						} else {
-							hookLog("not all keys are pressed\n")
-						}
+			} else if ev.Kind == MouseDown || ev.Kind == MouseUp || ev.Kind == MouseHold {
+				button := Code(ev.Button)
+				cb := mouseRegistry[ev.Kind][button]
+				switch ev.Kind {
+				case MouseDown:
+					hookLog("checking if %v is pressed\n", button)
+					if ok := mousePressed[button]; ok {
+						hookLog("calling %v\n", button)
+						cb(ev)
+					} else {
+						hookLog("not all keys are pressed\n")
+					}
+				case MouseUp, MouseHold:
+					hookLog("checking if %v is unpressed\n", button)
+					if ok := mousePressed[button]; !ok {
+						hookLog("calling %v\n", button)
+						cb(ev)
+					} else {
+						hookLog("not all keys are unpressed\n")
 					}
 				}
 			}
@@ -313,7 +323,7 @@ func (e Event) String() string {
 // returns event channel
 func Start() chan Event {
 	ev = make(chan Event, 1024)
-	hookLog("starting C.start_ev")
+	hookLog("%s\n", "starting C.start_ev")
 	go C.start_ev()
 
 	go func() {
@@ -339,6 +349,7 @@ func End() {
 
 	pressed = make(map[Code]bool, 256)
 	registry = make(map[Kind]map[[4]Code]func(Event))
+	mouseRegistry = make(map[Kind]map[Code]func(Event))
 }
 
 // AddEvent add the block event listener
@@ -358,7 +369,7 @@ func StopEvent() {
 }
 
 func hookLog(format string, args ...any) {
-	if debugLevel == Debug {
+	if logLevel == Debug {
 		fmt.Printf(format, args...)
 	}
 }

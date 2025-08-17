@@ -26,10 +26,13 @@ func main() {
 	hook.Register(hook.MouseDown, keyBindings, func(e hook.Event) {
 		fmt.Println(e)
 	})
+	hook.Register(hook.MouseHold, keyBindings, func(e hook.Event) {
+		fmt.Println(e)
+	})
 	timepassed := time.Since(now)
 	fmt.Printf("hook.Register: %v\n", timepassed)
 
-	hook.SetDebugLevel(hook.Silent)
+	hook.SetLogLevel(hook.Silent)
 	fmt.Println("starting hook")
 	s := hook.Start()
 	defer hook.End()

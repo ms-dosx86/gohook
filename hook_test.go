@@ -112,7 +112,6 @@ func TestKeyUpWithModifier(t *testing.T) {
 			Keycode: Keycode["ctrl"],
 			Kind:    KeyUp,
 		}
-		time.Sleep(100 * time.Millisecond)
 		ch <- Event{
 			Keycode: Keycode["a"],
 			Kind:    KeyUp,
@@ -194,5 +193,47 @@ func TestCombinationsLimit(t *testing.T) {
 	err = Register(KeyDown, []string{"ctrl", "a", "b", "c"}, func(e Event) {})
 	if err != nil {
 		t.Fatal("Expected no error, got", err)
+	}
+}
+
+func TestMouseDownWithMouseUp(t *testing.T) {
+	mouseDownOccurred := false
+	mouseUpOccurred := make(chan bool)
+	err := Register(MouseDown, []string{"mleft"}, func(e Event) {
+		mouseDownOccurred = true
+	})
+	if err != nil {
+		t.Fatal("Could not register mouse down callback: ", err)
+	}
+	err = Register(MouseUp, []string{"mleft"}, func(e Event) {
+		mouseUpOccurred <- true
+	})
+	if err != nil {
+		t.Fatal("Could not register mouse up callback: ", err)
+	}
+	ch := Start()
+
+	defer End()
+
+	Process(ch)
+
+	go func() {
+		ch <- Event{
+			Button: MouseMap["left"],
+			Kind:   MouseDown,
+		}
+		ch <- Event{
+			Button: MouseMap["right"],
+			Kind:   MouseUp,
+		}
+	}()
+
+	select {
+	case <-time.After(time.Second * 1):
+		if !mouseDownOccurred {
+			t.Fatal("Timeout waiting for mouse events")
+		}
+	case <-mouseUpOccurred:
+		t.Fatal("MouseUp occurred for the wrong button")
 	}
 }
