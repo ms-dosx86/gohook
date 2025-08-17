@@ -1,9 +1,6 @@
 name: Go CI/CD
 
 on:
-  pull_request:
-    branches:
-      - master
   push:
     branches:
       - master
