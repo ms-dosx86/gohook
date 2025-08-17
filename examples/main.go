@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	hook "github.com/robotn/gohook"
+	hook "github.com/ms-dosx86/gohook"
 )
 
 func main() {
