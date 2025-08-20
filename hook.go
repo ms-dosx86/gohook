@@ -103,13 +103,15 @@ var (
 			},
 		}
 	*/
-	registry      = make(map[Kind]map[[4]Code]func(Event))
-	mouseRegistry = make(map[Kind]map[Code]func(Event))
-	pressed       = make(map[Code]bool)
-	mousePressed  = make(map[Code]bool)
-	ev            = make(chan Event, 1024)
-	lck           = sync.RWMutex{}
-	logLevel      = DebugLevel(0)
+	registry       = make(map[Kind]map[[4]Code]func(Event))
+	mouseRegistry  = make(map[Kind]map[Code]func(Event))
+	pressed        = make(map[Code]bool)
+	mousePressed   = make(map[Code]bool)
+	ev             = make(chan Event, 1024)
+	lck            = sync.RWMutex{}
+	logLevel       = DebugLevel(0)
+	lastKeyEvent   = Event{}
+	lastMouseEvent = Event{}
 )
 
 func allPressed(pressed map[Code]bool, keys [4]Code) bool {
@@ -199,11 +201,17 @@ func Process(evChan <-chan Event) (out chan bool) {
 	go func() {
 		for ev := range evChan {
 			hookLog("%v\n", ev)
-			if ev.Kind != KeyDown && ev.Kind != KeyUp && ev.Kind != MouseDown && ev.Kind != MouseUp && ev.Kind != MouseHold {
+			if !isKeyEvent(ev) && !isMouseEvent(ev) {
 				continue
 			}
 
-			if ev.Kind == MouseDown || ev.Kind == MouseUp || ev.Kind == MouseHold {
+			if isSpam(ev) {
+				continue
+			}
+
+			updateLastEvent(ev)
+
+			if isMouseEvent(ev) {
 				button := Code(ev.Button)
 				_, ok := mouseRegistry[ev.Kind][button]
 				if !ok {
@@ -227,7 +235,8 @@ func Process(evChan <-chan Event) (out chan bool) {
 				mousePressed[Code(ev.Button)] = false
 			}
 
-			if ev.Kind == KeyDown || ev.Kind == KeyUp {
+			switch ev.Kind {
+			case KeyDown, KeyUp:
 				for combination, v := range registry[ev.Kind] {
 					switch ev.Kind {
 					case KeyDown:
@@ -248,7 +257,7 @@ func Process(evChan <-chan Event) (out chan bool) {
 						}
 					}
 				}
-			} else if ev.Kind == MouseDown || ev.Kind == MouseUp || ev.Kind == MouseHold {
+			case MouseDown, MouseUp, MouseHold:
 				button := Code(ev.Button)
 				cb := mouseRegistry[ev.Kind][button]
 				switch ev.Kind {
@@ -372,4 +381,34 @@ func hookLog(format string, args ...any) {
 	if logLevel == Debug {
 		fmt.Printf(format, args...)
 	}
+}
+
+func updateLastEvent(ev Event) {
+	if isKeyEvent(ev) {
+		lastKeyEvent = ev
+	}
+
+	if isMouseEvent(ev) {
+		lastMouseEvent = ev
+	}
+}
+
+func isSpam(ev Event) bool {
+	if isKeyEvent(ev) {
+		return lastKeyEvent.Keycode == ev.Keycode && ev.Kind == lastKeyEvent.Kind
+	}
+
+	if isMouseEvent(ev) {
+		return lastMouseEvent.Button == ev.Button && ev.Kind == lastMouseEvent.Kind
+	}
+
+	return false
+}
+
+func isKeyEvent(ev Event) bool {
+	return ev.Kind == KeyDown || ev.Kind == KeyUp
+}
+
+func isMouseEvent(ev Event) bool {
+	return ev.Kind == MouseDown || ev.Kind == MouseUp || ev.Kind == MouseHold
 }

@@ -237,3 +237,78 @@ func TestMouseDownWithMouseUp(t *testing.T) {
 		t.Fatal("MouseUp occurred for the wrong button")
 	}
 }
+
+func TestPreventKeyDownSpamming(t *testing.T) {
+	count := 0
+	err := Register(KeyDown, []string{"a"}, func(e Event) {
+		count++
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch := Start()
+	defer End()
+	Process(ch)
+
+	go func() {
+		// counts
+		ch <- Event{
+			Keycode: Keycode["a"],
+			Kind:    KeyDown,
+		}
+		// doesn't count
+		ch <- Event{
+			Keycode: Keycode["a"],
+			Kind:    KeyDown,
+		}
+		// doesn't count
+		ch <- Event{
+			Keycode: Keycode["a"],
+			Kind:    KeyDown,
+		}
+		// triggering key up for a different key
+		// should clear the buffer
+		ch <- Event{
+			Keycode: Keycode["b"],
+			Kind:    KeyUp,
+		}
+		// counts
+		ch <- Event{
+			Keycode: Keycode["a"],
+			Kind:    KeyDown,
+		}
+		// triggering a mouse event should not clear the buffer
+		ch <- Event{
+			Button: MouseMap["left"],
+			Kind:   MouseDown,
+		}
+		// doesn't count
+		ch <- Event{
+			Keycode: Keycode["a"],
+			Kind:    KeyDown,
+		}
+		// triggering key up for the same key
+		// should clear the buffer
+		ch <- Event{
+			Keycode: Keycode["a"],
+			Kind:    KeyUp,
+		}
+		// counts
+		ch <- Event{
+			Keycode: Keycode["a"],
+			Kind:    KeyDown,
+		}
+
+		// Total count should be 3
+	}()
+
+	select {
+	case <-time.After(TIMEOUT):
+		t.Fatal("Timeout waiting for keydown")
+	case <-time.After(100 * time.Millisecond):
+		if count != 3 {
+			t.Fatal("Expected 3 keydowns, got", count)
+		}
+		t.Log("KeyDown received")
+	}
+}
