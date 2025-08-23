@@ -23,7 +23,7 @@ func TestKeyDown(t *testing.T) {
 
 	go func() {
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 	}()
@@ -50,12 +50,12 @@ func TestKeyDownWithModifier(t *testing.T) {
 
 	go func() {
 		ch <- Event{
-			Keycode: Keycode["ctrl"],
+			Rawcode: Keycode["ctrl"],
 			Kind:    KeyDown,
 		}
 		time.Sleep(100 * time.Millisecond)
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 	}()
@@ -82,7 +82,7 @@ func TestKeyUp(t *testing.T) {
 
 	go func() {
 		ch <- Event{
-			Keycode: Keycode["delete"],
+			Rawcode: Keycode["delete"],
 			Kind:    KeyUp,
 		}
 	}()
@@ -109,11 +109,11 @@ func TestKeyUpWithModifier(t *testing.T) {
 
 	go func() {
 		ch <- Event{
-			Keycode: Keycode["ctrl"],
+			Rawcode: Keycode["ctrl"],
 			Kind:    KeyUp,
 		}
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyUp,
 		}
 	}()
@@ -253,28 +253,28 @@ func TestPreventKeyDownSpamming(t *testing.T) {
 	go func() {
 		// counts
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 		// doesn't count
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 		// doesn't count
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 		// triggering key up for a different key
 		// should clear the buffer
 		ch <- Event{
-			Keycode: Keycode["b"],
+			Rawcode: Keycode["b"],
 			Kind:    KeyUp,
 		}
 		// counts
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 		// triggering a mouse event should not clear the buffer
@@ -284,18 +284,18 @@ func TestPreventKeyDownSpamming(t *testing.T) {
 		}
 		// doesn't count
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 		// triggering key up for the same key
 		// should clear the buffer
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyUp,
 		}
 		// counts
 		ch <- Event{
-			Keycode: Keycode["a"],
+			Rawcode: Keycode["a"],
 			Kind:    KeyDown,
 		}
 

@@ -148,7 +148,7 @@ func Register(when Kind, cmds []string, cb func(Event)) error {
 		var code uint16
 		var ok bool
 		if when == KeyDown || when == KeyUp {
-			code, ok = Keycode[v]
+			code, ok = WindowsVKCodes[v]
 			if !ok {
 				fmt.Printf("invalid key: %s\n", v)
 				fmt.Println("skipping...")
@@ -222,11 +222,11 @@ func Process(evChan <-chan Event) (out chan bool) {
 
 			switch ev.Kind {
 			case KeyDown, KeyHold:
-				hookLog("setting pressed[%v] = true\n", ev.Keycode)
-				pressed[Code(ev.Keycode)] = true
+				hookLog("setting pressed[%v] = true\n", ev.Rawcode)
+				pressed[Code(ev.Rawcode)] = true
 			case KeyUp:
-				hookLog("setting pressed[%v] = false\n", ev.Keycode)
-				pressed[Code(ev.Keycode)] = false
+				hookLog("setting pressed[%v] = false\n", ev.Rawcode)
+				pressed[Code(ev.Rawcode)] = false
 			case MouseDown:
 				hookLog("setting mousePressed[%v] = true\n", ev.Button)
 				mousePressed[Code(ev.Button)] = true
@@ -395,7 +395,7 @@ func updateLastEvent(ev Event) {
 
 func isSpam(ev Event) bool {
 	if isKeyEvent(ev) {
-		return lastKeyEvent.Keycode == ev.Keycode && ev.Kind == lastKeyEvent.Kind
+		return lastKeyEvent.Rawcode == ev.Rawcode && ev.Kind == lastKeyEvent.Kind
 	}
 
 	if isMouseEvent(ev) {

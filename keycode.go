@@ -16,7 +16,9 @@ import "github.com/vcaesar/keycode"
 var MouseMap = keycode.MouseMap
 
 // Keycode defines the robotgo hook key's code map
-var Keycode = keycode.Keycode
+// var Keycode = keycode.Keycode
+
+var Keycode = WindowsVKCodes
 
 // Special defines the special key map
 var Special = keycode.Special
