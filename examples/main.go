@@ -45,7 +45,7 @@ func main() {
 }
 
 func isMouseBind(bind string) bool {
-	return bind == "mleft" || bind == "mright" || strings.HasPrefix(bind, "wheel")
+	return bind == "mleft" || bind == "mright" || bind == "mcenter" || strings.HasPrefix(bind, "wheel")
 }
 
 func registerMouseBind(bind string, kind uint8) {
