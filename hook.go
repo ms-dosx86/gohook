@@ -132,6 +132,15 @@ func allUnpressed(pressed map[Code]bool, keys [4]Code) bool {
 	return true
 }
 
+func comboContains(combo [4]Code, key Code) bool {
+	for _, k := range combo {
+		if k != 0 && k == key {
+			return true
+		}
+	}
+	return false
+}
+
 func SetLogLevel(level DebugLevel) {
 	logLevel = level
 }
@@ -237,9 +246,13 @@ func Process(evChan <-chan Event) (out chan bool) {
 
 			switch ev.Kind {
 			case KeyDown, KeyUp:
+				eventKey := Code(ev.Rawcode)
 				for combination, v := range registry[ev.Kind] {
 					switch ev.Kind {
 					case KeyDown:
+						if !comboContains(combination, eventKey) {
+							continue
+						}
 						hookLog("checking if %v is pressed\n", combination)
 						if allPressed(pressed, combination) {
 							hookLog("calling %v\n", combination)
@@ -248,6 +261,9 @@ func Process(evChan <-chan Event) (out chan bool) {
 							hookLog("not all keys are pressed\n")
 						}
 					case KeyUp:
+						if !comboContains(combination, eventKey) {
+							continue
+						}
 						hookLog("checking if %v is pressed\n", combination)
 						if allUnpressed(pressed, combination) {
 							hookLog("calling %v\n", combination)
