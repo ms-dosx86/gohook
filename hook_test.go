@@ -312,3 +312,105 @@ func TestPreventKeyDownSpamming(t *testing.T) {
 		t.Log("KeyDown received")
 	}
 }
+
+func TestKeyUpDoesNotFireForDifferentKey(t *testing.T) {
+	done := make(chan bool)
+	err := Register(KeyUp, []string{"a"}, func(e Event) {
+		done <- true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch := Start()
+	defer End()
+	Process(ch)
+
+	go func() {
+		// press and hold 'a'
+		ch <- Event{Rawcode: Keycode["a"], Kind: KeyDown}
+		// release a different key 'g' (should not trigger 'a' keyup)
+		ch <- Event{Rawcode: Keycode["g"], Kind: KeyUp}
+		// now release 'a' to ensure the correct event still fires
+		time.Sleep(50 * time.Millisecond)
+		ch <- Event{Rawcode: Keycode["a"], Kind: KeyUp}
+	}()
+
+	select {
+	case <-time.After(TIMEOUT):
+		t.Fatal("Timeout waiting for correct keyup sequence")
+	case <-done:
+		t.Log("KeyUp for 'a' received only after releasing 'a'")
+	}
+}
+
+func TestComboDoesNotRetriggerWithUnrelatedKeys(t *testing.T) {
+	count := 0
+	err := Register(KeyDown, []string{"ctrl", "a"}, func(e Event) {
+		count++
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch := Start()
+	defer End()
+	Process(ch)
+
+	go func() {
+		// hold the combo ctrl+a
+		ch <- Event{Rawcode: Keycode["ctrl"], Kind: KeyDown}
+		time.Sleep(10 * time.Millisecond)
+		ch <- Event{Rawcode: Keycode["a"], Kind: KeyDown}
+		// press unrelated keys while holding the combo
+		ch <- Event{Rawcode: Keycode["g"], Kind: KeyDown}
+		ch <- Event{Rawcode: Keycode["g"], Kind: KeyUp}
+		// release combo
+		ch <- Event{Rawcode: Keycode["a"], Kind: KeyUp}
+		ch <- Event{Rawcode: Keycode["ctrl"], Kind: KeyUp}
+	}()
+
+	select {
+	case <-time.After(TIMEOUT):
+		t.Fatal("Timeout waiting for combo test")
+	case <-time.After(100 * time.Millisecond):
+		if count != 1 {
+			t.Fatalf("Expected combo to trigger once, got %d", count)
+		}
+	}
+}
+
+func TestAKeyHandlersNotTriggeredByG(t *testing.T) {
+	countDown := 0
+	countUp := 0
+
+	err := Register(KeyDown, []string{"a"}, func(e Event) {
+		countDown++
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = Register(KeyUp, []string{"a"}, func(e Event) {
+		countUp++
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ch := Start()
+	defer End()
+	Process(ch)
+
+	go func() {
+		ch <- Event{Rawcode: Keycode["g"], Kind: KeyDown}
+		ch <- Event{Rawcode: Keycode["g"], Kind: KeyUp}
+	}()
+
+	select {
+	case <-time.After(TIMEOUT):
+		t.Fatal("Timeout waiting for non-trigger condition")
+	case <-time.After(100 * time.Millisecond):
+		if countDown != 0 || countUp != 0 {
+			t.Fatalf("Expected no 'a' callbacks, got KeyDown=%d KeyUp=%d", countDown, countUp)
+		}
+	}
+}
